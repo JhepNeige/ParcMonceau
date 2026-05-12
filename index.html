@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Éditeur graphe – parcours propre</title>
+
+<style>
+  body { font-family: Arial, sans-serif; padding: 10px; }
+
+  #dropContainer {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .dropZone {
+    flex: 1;
+    border: 2px dashed #aaa;
+    padding: 15px;
+    text-align: center;
+    color: #666;
+  }
+
+  .dropZone.dragover {
+    background: #eef7ff;
+    border-color: #2196f3;
+    color: #000;
+  }
+
+  canvas {
+    border: 1px solid #aaa;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  button { margin-right: 6px; }
+
+  #playBtn, #stopBtn { display: none; }
+
+  #report {
+    margin-top: 10px;
+    background: #f4f4f4;
+    padding: 8px;
+    white-space: pre;
+    font-size: 13px;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="dropContainer">
+  <div id="dropImage" class="dropZone">Image PNG</div>
+  <div id="dropJSON" class="dropZone">JSON</div>
+</div>
+
+<button id="pathBtn">Parcours</button>
+<button id="playBtn">▶️</button>
+<button id="stopBtn">⏹</button>
+<button id="exportBtn">Exporter JSON</button>
+
+<canvas id="canvas"></canvas>
+<pre id="report"></pre>
+
+<script>
+/* =========================
+   Base
+========================= */
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => e.preventDefault());
+
+const ctx = canvas.getContext("2d");
+let img = new Image();
+let imageLoaded = false;
+
+/* =========================
+   Graphe source
+========================= */
+let points = [];
+let traits = [];
+let selectedPoint = null;
+
+/* =========================
+   Parcours
+========================= */
+let pathEdges = [];
+let animatedCount = 0;
+let timer = null;
+
+/* =========================
+   Drop zones
+========================= */
+setupDropZone(dropImage, loadImage);
+setupDropZone(dropJSON, loadJSON);
+
+function setupDropZone(zone, handler) {
+  zone.addEventListener("dragover", e => {
+    e.preventDefault();
+    zone.classList.add("dragover");
+  });
+  zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+  zone.addEventListener("drop", e => {
+    e.preventDefault();
+    zone.classList.remove("dragover");
+    handler(e.dataTransfer.files[0]);
+  });
+}
+
+/* =========================
+   Chargements
+========================= */
+function loadImage(file) {
+  if (!file?.type.startsWith("image/")) return;
+  const r = new FileReader();
+  r.onload = () => {
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      imageLoaded = true;
+      redraw();
+    };
+    img.src = r.result;
+  };
+  r.readAsDataURL(file);
+}
+
+
+function loadJSON(file) {
+  if (!file || file.type !== "application/json") return;
+  if (points.length && !confirm("Écraser le graphe courant ?")) return;
+
+  const r = new FileReader();
+  r.onload = () => {
+    const d = JSON.parse(r.result);
+
+    canvas.width  = d.imageWidth;
+    canvas.height = d.imageHeight;
+
+    points = d.points || [];
+    traits = d.traits || [];
+
+    resetPlayback();
+
+    // ✅ NOUVEAU : chargement éventuel du parcours
+    if (Array.isArray(d.path) && d.path.length > 0) {
+      pathEdges = d.path;
+      animatedCount = pathEdges.length; // affiché complètement au départ
+      playBtn.style.display = "inline-block";
+      stopBtn.style.display = "inline-block";
+    }
+
+    redraw();
+  };
+  r.readAsText(file);
+}
+
+
+/* =========================
+   Export
+========================= */
+exportBtn.onclick = () => {
+  const blob = new Blob([JSON.stringify({
+    imageWidth: canvas.width,
+    imageHeight: canvas.height,
+    points,
+    traits,
+    path: pathEdges
+  }, null, 2)], { type: "application/json" });
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "annotations.json";
+  a.click();
+};
+
+/* =========================
+   Utilitaires
+========================= */
+function pos(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+function findPoint(x, y) {
+  return points.findIndex(p => Math.hypot(p.x - x, p.y - y) < 8);
+}
+
+function resetPlayback() {
+  pathEdges = [];
+  animatedCount = 0;
+  clearInterval(timer);
+  playBtn.style.display = stopBtn.style.display = "none";
+  report.textContent = "";
+}
+
+/* =========================
+   ÉDITION – RESTAURÉE ✅
+========================= */
+
+// clic gauche : ajouter / supprimer point
+canvas.addEventListener("mousedown", e => {
+  if (e.button !== 0) return;
+
+  const { x, y } = pos(e);
+  const idx = findPoint(x, y);
+
+  if (idx === -1) {
+    points.push({ x, y });
+  } else {
+    points.splice(idx, 1);
+    traits = traits
+      .filter(t => t.from !== idx && t.to !== idx)
+      .map(t => ({
+        from: t.from > idx ? t.from - 1 : t.from,
+        to:   t.to   > idx ? t.to   - 1 : t.to
+      }));
+    if (selectedPoint === idx) selectedPoint = null;
+  }
+
+  resetPlayback();
+  redraw();
+});
+
+// clic droit : créer liens
+canvas.addEventListener("contextmenu", e => {
+  e.preventDefault();
+  const { x, y } = pos(e);
+  const idx = findPoint(x, y);
+
+  if (idx === -1) {
+    selectedPoint = null;
+  } else if (selectedPoint === null) {
+    selectedPoint = idx;
+  } else if (selectedPoint !== idx) {
+    if (!traits.some(t =>
+      (t.from === selectedPoint && t.to === idx) ||
+      (t.from === idx && t.to === selectedPoint)
+    )) {
+      traits.push({ from: selectedPoint, to: idx });
+    }
+    selectedPoint = null;
+  }
+
+  resetPlayback();
+  redraw();
+});
+
+/* =========================
+   Parcours (inchangé)
+========================= */
+pathBtn.onclick = () => {
+  resetPlayback();
+
+  const calcEdges = traits.map(t => ({ ...t, replay: false }));
+  const deg = {};
+
+  calcEdges.forEach(t => {
+    deg[t.from] = (deg[t.from] || 0) + 1;
+    deg[t.to]   = (deg[t.to]   || 0) + 1;
+  });
+
+  let odd = Object.keys(deg).filter(k => deg[k] % 2).map(Number);
+  odd.sort(() => Math.random() - 0.5);
+
+  function shortestPath(a, b) {
+    const q = [[a]];
+    const seen = new Set([a]);
+    while (q.length) {
+      const p = q.shift();
+      const v = p[p.length - 1];
+      if (v === b) return p;
+      calcEdges.forEach(t => {
+        const n = t.from === v ? t.to : t.to === v ? t.from : null;
+        if (n !== null && !seen.has(n)) {
+          seen.add(n);
+          q.push([...p, n]);
+        }
+      });
+    }
+    return [];
+  }
+
+  let rep = "";
+  let count = 1;
+
+  while (odd.length >= 2) {
+    const a = odd.pop();
+    const b = odd.pop();
+    const p = shortestPath(a, b);
+    rep += `Téléportation ${count++} : ${p.length - 1} segments\n`;
+    for (let i = 0; i < p.length - 1; i++) {
+      calcEdges.push({ from: p[i], to: p[i + 1], replay: true });
+    }
+  }
+
+  report.textContent = rep || "Téléportation : 0\n";
+
+  const adj = {};
+  calcEdges.forEach((t, i) => {
+    (adj[t.from] ??= []).push({ to: t.to, i });
+    (adj[t.to]   ??= []).push({ to: t.from, i });
+  });
+
+  const used = new Set();
+  const stack = [calcEdges[0]?.from];
+  const tmp = [];
+
+  while (stack.length) {
+    const v = stack[stack.length - 1];
+    const e = (adj[v] || []).find(x => !used.has(x.i));
+    if (e) {
+      used.add(e.i);
+      stack.push(e.to);
+      tmp.push({ from: v, to: e.to, replay: calcEdges[e.i].replay });
+    } else {
+      stack.pop();
+      if (tmp.length) pathEdges.unshift(tmp.pop());
+    }
+  }
+
+  playBtn.style.display = stopBtn.style.display = "inline-block";
+  redraw();
+};
+
+/* =========================
+   Animation
+========================= */
+playBtn.onclick = () => {
+  animatedCount = 0;
+  clearInterval(timer);
+  timer = setInterval(() => {
+    if (animatedCount < pathEdges.length) {
+      animatedCount++;
+      redraw();
+    } else {
+      clearInterval(timer);
+    }
+  }, 500);
+};
+
+stopBtn.onclick = () => clearInterval(timer);
+
+/* =========================
+   Dessin
+========================= */
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (imageLoaded) ctx.drawImage(img, 0, 0);
+
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  traits.forEach(t => {
+    const a = points[t.from];
+    const b = points[t.to];
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  });
+
+  points.forEach((p, i) => {
+    ctx.fillStyle = i === selectedPoint ? "orange" : "blue";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  const cycle = 12;
+  for (let i = 0; i < animatedCount; i++) {
+    const e = pathEdges[i];
+    const a = points[e.from];
+    const b = points[e.to];
+
+    const dx = b.y - a.y;
+    const dy = a.x - b.x;
+    const len = Math.hypot(dx, dy) || 1;
+    const off = e.replay ? 3 : 0;
+    const ox = dx / len * off;
+    const oy = dy / len * off;
+
+    const g = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+    g.addColorStop(0, `hsl(${(i / cycle) * 360},100%,50%)`);
+    g.addColorStop(1, `hsl(${((i + 1) / cycle) * 360},100%,50%)`);
+
+    ctx.strokeStyle = g;
+    ctx.lineWidth = e.replay ? 2 : 4;
+    ctx.beginPath();
+    ctx.moveTo(a.x + ox, a.y + oy);
+    ctx.lineTo(b.x + ox, b.y + oy);
+    ctx.stroke();
+  }
+}
+</script>
+</body>
+</html>
