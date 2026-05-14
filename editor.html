@@ -20,18 +20,16 @@ button { margin-right:6px; }
 
 <body>
 
-<!--
 <div id="dropContainer">
  <div id="dropImage" class="dropZone">Image PNG</div>
  <div id="dropJSON" class="dropZone">JSON</div>
 </div>
--->
 
 <button id="pathBtn">Parcours</button>
 <button id="playBtn">▶️</button>
 <button id="stopBtn">⏹</button>
-<!-- <button id="exportBtn">Exporter JSON</button>
-<button id="oddBtn">Noeuds impairs</button> -->
+<button id="exportBtn">Exporter JSON</button>
+<button id="oddBtn">Noeuds impairs</button>
 
 <canvas id="canvas"></canvas>
 <pre id="report"></pre>
@@ -51,7 +49,7 @@ let showOdd=false, oddNodes=new Set();
 /* =========================
    Drop
 ========================= */
-/**document.addEventListener("dragover", e=>e.preventDefault());
+document.addEventListener("dragover", e=>e.preventDefault());
 document.addEventListener("drop", e=>e.preventDefault());
 
 setupDropZone(dropImage, loadImage);
@@ -66,7 +64,7 @@ function setupDropZone(zone, handler){
   e.preventDefault(); zone.classList.remove("dragover");
   handler(e.dataTransfer.files[0]);
  });
-}**/
+}
 
 /* =========================
    Load
@@ -108,45 +106,10 @@ function loadJSON(file){
  r.readAsText(file);
 }
 
-function loadDefault() {
-
-  // --- Charger image ---
-  img.onload = () => {
-    canvas.width = img.width;
-    canvas.height = img.height;
-    imageLoaded = true;
-    redraw();
-  };
-  img.src = "parc monceau.png"; // 📌 ton fichier local
-
-  // --- Charger JSON ---
-  fetch("plan v1.json")
-    .then(r => r.json())
-    .then(d => {
-      points = d.points || [];
-      traits = d.traits || [];
-
-      resetPlayback();
-
-      if (Array.isArray(d.path)) {
-        pathEdges = d.path;
-        animatedCount = pathEdges.length;
-        playBtn.style.display = "inline-block";
-        stopBtn.style.display = "inline-block";
-      }
-
-      redraw();
-    })
-    .catch(() => {
-      console.log("Pas de JSON chargé (ok)");
-    });
-}
-
-
 /* =========================
    Export
 ========================= */
-/*exportBtn.onclick=()=>{
+exportBtn.onclick=()=>{
  const blob=new Blob([JSON.stringify({
   imageWidth:canvas.width,
   imageHeight:canvas.height,
@@ -158,7 +121,7 @@ function loadDefault() {
  a.href=URL.createObjectURL(blob);
  a.download="annotations.json";
  a.click();
-};*/
+};
 
 /* =========================
    Utils
@@ -187,7 +150,7 @@ function reset(){
 /* =========================
    Edition
 ========================= */
-/***canvas.addEventListener("mousedown",e=>{
+canvas.addEventListener("mousedown",e=>{
  if(e.button!==0)return;
 
  const {x,y}=pos(e);
@@ -220,12 +183,12 @@ canvas.addEventListener("contextmenu",e=>{
  }
 
  reset(); redraw();
-});***/
+});
 
 /* =========================
    Noeuds impairs
 ========================= */
-/*oddBtn.onclick=()=>{
+oddBtn.onclick=()=>{
  showOdd=!showOdd;
  oddNodes.clear();
 
@@ -240,7 +203,7 @@ canvas.addEventListener("contextmenu",e=>{
  });
 
  redraw();
-};*/
+};
 
 /* =========================
    BFS
@@ -461,9 +424,6 @@ function redraw(){
   ctx.stroke();
  }
 }
-
-loadDefault();
-
 </script>
 </body>
 </html>
