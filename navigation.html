@@ -46,23 +46,28 @@ canvas {
 
 #controls {
     position:fixed;   /* ✅ plus lié au viewport simulé */
-    top:15px;
-    right:15px;
+
+    gap: clamp(8px, 1.5vw, 20px);
+    top: clamp(10px, 2vw, 30px);
+    right: clamp(10px, 2vw, 30px);
 
     display:flex;
     flex-direction:column;
-    gap:10px;
 
     z-index:1000;
 }
 
 
 button {
-    font-size:16px;
-    padding:10px;
+//    padding:10px;
     background:white;
     border:none;
-    border-radius:8px;
+ 
+    width: clamp(40px, 5vw, 80px);
+    height: clamp(40px, 5vw, 80px);
+    font-size: clamp(14px, 2vw, 28px);
+    border-radius: clamp(6px, 1vw, 12px);
+
     box-shadow:0 2px 6px rgba(0,0,0,0.4);
 }
 </style>
