@@ -5,25 +5,27 @@
 <title>Navigation mobile</title>
 
 <style>
+
 body {
     margin:0;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-    background:#111;
+    overflow:hidden; /* empêche scroll */
+    background:black;
 }
 
-/* ✅ viewport téléphone */
+/* ✅ viewport = plein écran */
 #viewport {
-    width:360px;
-    height:640px;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100vw;
+    height:100vh;
+
     overflow:hidden;
-    position:relative;
     background:black;
 
     perspective:900px;
 }
+
 
 /* ✅ carte */
 #map {
@@ -41,17 +43,19 @@ canvas {
 }
 
 /* ✅ boutons FIX (plus de translateZ) */
+
 #controls {
-    position:absolute;
-    top:10px;
-    right:10px;
+    position:fixed;   /* ✅ plus lié au viewport simulé */
+    top:15px;
+    right:15px;
 
     display:flex;
     flex-direction:column;
-    gap:8px;
+    gap:10px;
 
-    z-index:10; /* suffisant maintenant */
+    z-index:1000;
 }
+
 
 button {
     font-size:16px;
@@ -93,6 +97,8 @@ let step = 0;
 let currentNode = null;
 let currentAngleFrom = 0;
 let currentAngleTo = 0;
+
+window.addEventListener("resize", redraw);
 
 /* =========================
    LOAD
@@ -169,8 +175,11 @@ function redraw() {
 function applyCamera(node, angleFrom) {
 
     const zoom = 4;
-    const viewW = 360;
-    const viewH = 640;
+//    const viewW = 360;
+//    const viewH = 640;
+
+	const viewW = window.innerWidth;
+	const viewH = window.innerHeight;
 
     const angleDeg = (-angleFrom - Math.PI/2) * 180 / Math.PI;
 
