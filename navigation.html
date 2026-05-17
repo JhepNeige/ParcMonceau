@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Navigation mobile</title>
+
+<style>
+body {
+    margin:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    background:#111;
+}
+
+/* ✅ viewport téléphone */
+#viewport {
+    width:360px;
+    height:640px;
+    overflow:hidden;
+    position:relative;
+    background:black;
+
+    perspective:900px;
+}
+
+/* ✅ carte */
+#map {
+    position:absolute;
+    top:0;
+    left:0;
+    transform-origin:0 0;
+    z-index:1;
+    transition: transform 0.3s ease;
+}
+
+/* ✅ canvas */
+canvas {
+    display:block;
+}
+
+/* ✅ boutons FIX (plus de translateZ) */
+#controls {
+    position:absolute;
+    top:10px;
+    right:10px;
+
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+
+    z-index:10; /* suffisant maintenant */
+}
+
+button {
+    font-size:16px;
+    padding:10px;
+    background:white;
+    border:none;
+    border-radius:8px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.4);
+}
+</style>
+</head>
+
+<body>
+
+<div id="viewport">
+
+    <div id="map">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div id="controls">
+        <button onclick="nextStep()">▶</button>
+        <button onclick="prevStep()">◀</button>
+    </div>
+
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const mapDiv = document.getElementById("map");
+
+let img = new Image();
+let imageLoaded = false;
+let points = [];
+let pathEdges = [];
+let step = 0;
+
+let currentNode = null;
+let currentAngleFrom = 0;
+let currentAngleTo = 0;
+
+/* =========================
+   LOAD
+========================= */
+img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    imageLoaded = true;
+    redraw();
+};
+
+img.src = "parc monceau.png";
+
+fetch("https://jhepneige.github.io/ParcMonceau/plan v1_path v1.json")
+.then(r => r.json())
+.then(data => {
+    points = data.points || [];
+    pathEdges = data.path || [];
+    redraw();
+});
+
+/* =========================
+   NAVIGATION
+========================= */
+function nextStep() {
+    if (step < pathEdges.length - 1) step++;
+    redraw();
+}
+
+function prevStep() {
+    if (step > 0) step--;
+    redraw();
+}
+
+/* =========================
+   DRAW
+========================= */
+function redraw() {
+    if (!imageLoaded || pathEdges.length === 0) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0);
+
+    const currEdge = pathEdges[step];
+    const currNode = points[currEdge.from];
+    const nextNode = points[currEdge.to];
+
+    const prevNode = step === 0
+        ? {x:546, y:147}
+        : points[pathEdges[step - 1].from];
+
+    const angleFrom = Math.atan2(
+        currNode.y - prevNode.y,
+        currNode.x - prevNode.x
+    );
+
+    const angleTo = Math.atan2(
+        nextNode.y - currNode.y,
+        nextNode.x - currNode.x
+    );
+
+    currentNode = currNode;
+    currentAngleFrom = angleFrom;
+    currentAngleTo = angleTo;
+
+    applyCamera(currNode, angleFrom);
+
+    drawArrow();
+}
+
+/* =========================
+   CAMERA CSS
+========================= */
+function applyCamera(node, angleFrom) {
+
+    const zoom = 4;
+    const viewW = 360;
+    const viewH = 640;
+
+    const angleDeg = (-angleFrom - Math.PI/2) * 180 / Math.PI;
+
+    mapDiv.style.transform = `
+        translate(${viewW/2}px, ${viewH/2}px)
+        rotateX(60deg)
+        rotate(${angleDeg}deg)
+        scale(${zoom})
+        translate(${-node.x}px, ${-node.y}px)
+    `;
+}
+
+/* =========================
+   FLECHE corrigée
+========================= */
+function drawArrow() {
+
+    if (!currentNode) return;
+
+    const relativeAngle = currentAngleTo + Math.PI/2 ;
+
+    ctx.save();
+
+    // ✅ On positionne la flèche AU NOEUD courant (et pas écran)
+    ctx.translate(currentNode.x, currentNode.y);
+
+    ctx.rotate(relativeAngle);
+
+    ctx.fillStyle = "blue";
+	ctx.globalAlpha = 0.5;    
+
+	ctx.scale(0.5, 0.5);
+
+	ctx.beginPath();
+    ctx.moveTo(0,-100);
+    ctx.lineTo(20,-60);
+    ctx.lineTo(5,-60);
+    ctx.lineTo(5, 0);
+    ctx.lineTo(-5, 0);
+    ctx.lineTo(-5,-60);
+    ctx.lineTo(-20,-60);
+    ctx.closePath();
+
+    ctx.fill();
+
+    ctx.restore();
+}
+
+</script>
+
+</body>
+</html>
