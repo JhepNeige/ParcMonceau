@@ -10,6 +10,7 @@ body {
     margin:0;
     overflow:hidden; /* empêche scroll */
     background:black;
+	touch-action: manipulation;
 }
 
 /* ✅ viewport = plein écran */
@@ -33,7 +34,7 @@ body {
     top:0;
     left:0;
     transform-origin:0 0;
-    z-index:1;
+    z-index:2;
     transition: transform 0.3s ease;
 }
 
@@ -71,6 +72,14 @@ button {
 
     box-shadow:0 2px 6px rgba(0,0,0,0.4);
 }
+
+#canvas2 {
+  z-index: 1; /* derrière */
+  width: 100%;
+  height: 100%;
+  image-rendering: auto; /* upscale smooth */
+}
+
 </style>
 </head>
 
@@ -78,6 +87,7 @@ button {
 
 <div id="viewport">
 
+	<canvas id="canvas2"></canvas>
     <div id="map">
         <canvas id="canvas"></canvas>
     </div>
@@ -174,6 +184,7 @@ function redraw() {
     applyCamera(currNode, angleFrom);
 
     drawArrow();
+	renderBackground();
 }
 
 /* =========================
@@ -196,14 +207,14 @@ function applyCamera(node, angleFrom) {
 	const viewW = window.innerWidth;
 	const viewH = window.innerHeight;
 
-    let angleDeg = goodAngle(-angleFrom - Math.PI/2);
-	if (lastAngle!=null && Math.abs(lastAngle-angleDeg)>Math.PI/2) angleDeg=lastAngle+goodAngle(angleDeg-goodAngle(lastAngle)); // is it worth testing ?
-	lastAngle=angleDeg;
+    let angle = goodAngle(-angleFrom - Math.PI/2);
+	if (lastAngle!=null && Math.abs(lastAngle-angle)>Math.PI/2) angle=lastAngle+goodAngle(angle-goodAngle(lastAngle)); // is it worth testing ?
+	lastAngle=angle;
 
     mapDiv.style.transform = `
         translate(${viewW/2}px, ${viewH/2}px)
         rotateX(60deg)
-        rotate(${deg(angleDeg)}deg)
+        rotate(${deg(angle)}deg)
         scale(${zoom})
         translate(${-node.x}px, ${-node.y}px)
     `;
@@ -244,6 +255,161 @@ function drawArrow() {
 
     ctx.restore();
 }
+const canvas2 = document.getElementById("canvas2");
+const ctx2 = canvas2.getContext("2d");
+
+const viewport = document.getElementById("viewport");
+
+// =========
+// CONFIG
+// =========
+const LOW_RES = 100; // résolution du fond (plus bas = plus rapide)
+
+// =========
+// 1. récupérer quadrilatère affiché
+// =========
+function getQuadPoints(el) {
+  const style = getComputedStyle(el);
+  const matrix = new DOMMatrix(style.transform);
+
+  const w = el.offsetWidth;
+  const h = el.offsetHeight;
+
+  const rect = el.getBoundingClientRect();
+
+  const pts = [
+    new DOMPoint(0, 0),
+    new DOMPoint(w, 0),
+    new DOMPoint(w, h),
+    new DOMPoint(0, h)
+  ];
+
+  return pts.map(p => {
+    const t = p.matrixTransform(matrix);
+    return {
+      x: t.x / t.w + rect.left,
+      y: t.y / t.w + rect.top
+    };
+  });
+}
+
+// =========
+// 2. distance point → segment
+// =========
+function distToSegment(px, py, a, b) {
+  const vx = b.x - a.x;
+  const vy = b.y - a.y;
+  const wx = px - a.x;
+  const wy = py - a.y;
+
+  const t = Math.max(0, Math.min(1, (wx*vx + wy*vy) / (vx*vx + vy*vy)));
+
+  const dx = a.x + t*vx - px;
+  const dy = a.y + t*vy - py;
+
+  return Math.sqrt(dx*dx + dy*dy);
+}
+
+// =========
+// 3. échantillonner une arête
+// =========
+function sampleEdgeColor(ctx, p1, p2, samples=30) {
+  let r=0,g=0,b=0;
+
+  for (let i=0;i<samples;i++){
+    const t = i/(samples-1);
+
+    const x = Math.round(p1.x + (p2.x - p1.x)*t);
+    const y = Math.round(p1.y + (p2.y - p1.y)*t);
+
+    // ⚠️ important : on lit dans canvas (pas écran)
+    const rect = canvas.getBoundingClientRect();
+
+    const cx = Math.round((x - rect.left) * canvas.width / rect.width);
+    const cy = Math.round((y - rect.top) * canvas.height / rect.height);
+
+    const p = ctx.getImageData(cx, cy, 1, 1).data;
+
+    r+=p[0]; g+=p[1]; b+=p[2];
+  }
+
+  return [r/samples, g/samples, b/samples];
+}
+
+// =========
+// 4. calcul couleurs des bords
+// =========
+function getEdgeColors(quad) {
+  return [
+    sampleEdgeColor(ctx, quad[0], quad[1]), // top
+    sampleEdgeColor(ctx, quad[1], quad[2]), // right
+    sampleEdgeColor(ctx, quad[2], quad[3]), // bottom
+    sampleEdgeColor(ctx, quad[3], quad[0])  // left
+  ];
+}
+
+// =========
+// 5. rendu du fond
+// =========
+function renderBackground() {
+
+  const vw = viewport.clientWidth;
+  const vh = viewport.clientHeight;
+
+  // canvas2 basse resolution
+  canvas2.width = LOW_RES;
+  canvas2.height = Math.round(LOW_RES * vh / vw);
+
+  const quad = getQuadPoints(canvas);
+  const colors = getEdgeColors(quad);
+
+  const edges = [
+    [quad[0], quad[1]],
+    [quad[1], quad[2]],
+    [quad[2], quad[3]],
+    [quad[3], quad[0]]
+  ];
+
+  const img = ctx2.createImageData(canvas2.width, canvas2.height);
+
+  for (let y=0; y<canvas2.height; y++) {
+    for (let x=0; x<canvas2.width; x++) {
+
+      // coordonnées écran
+      const sx = x / canvas2.width * vw;
+      const sy = y / canvas2.height * vh;
+
+      let r=0,g=0,b=0,sum=0;
+
+      for (let i=0;i<4;i++){
+        const d = distToSegment(sx, sy, edges[i][0], edges[i][1]);
+        const w = 1/(d+0.001);
+
+        r += colors[i][0]*w;
+        g += colors[i][1]*w;
+        b += colors[i][2]*w;
+        sum += w;
+      }
+
+      r/=sum; g/=sum; b/=sum;
+
+      const idx = (y*canvas2.width + x)*4;
+      img.data[idx] = r;
+      img.data[idx+1] = g;
+      img.data[idx+2] = b;
+      img.data[idx+3] = 255;
+    }
+  }
+
+  ctx2.putImageData(img, 0, 0);
+
+  // upscale
+  canvas2.style.width = vw + "px";
+  canvas2.style.height = vh + "px";
+}
+
+
+
 
 </script>
 
