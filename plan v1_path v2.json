@@ -490,39 +490,15 @@
     },
     {
       "from": 7,
-      "to": 8,
-      "replay": false,
-      "chosen": true
-    },
-    {
-      "from": 8,
-      "to": 5,
-      "replay": false,
-      "chosen": true
-    },
-    {
-      "from": 5,
       "to": 6,
       "replay": false,
       "chosen": true
-    },
-    {
-      "from": 6,
-      "to": 7,
-      "replay": false,
-      "chosen": true
-    },
-    {
-      "from": 7,
-      "to": 6,
-      "replay": true,
-      "chosen": false
     },
     {
       "from": 6,
       "to": 2,
       "replay": false,
-      "chosen": false
+      "chosen": true
     },
     {
       "from": 2,
@@ -574,39 +550,15 @@
     },
     {
       "from": 34,
-      "to": 18,
-      "replay": false,
-      "chosen": true
-    },
-    {
-      "from": 18,
-      "to": 35,
-      "replay": false,
-      "chosen": true
-    },
-    {
-      "from": 35,
       "to": 33,
       "replay": false,
       "chosen": true
-    },
-    {
-      "from": 33,
-      "to": 34,
-      "replay": false,
-      "chosen": true
-    },
-    {
-      "from": 34,
-      "to": 33,
-      "replay": true,
-      "chosen": false
     },
     {
       "from": 33,
       "to": 28,
       "replay": false,
-      "chosen": false
+      "chosen": true
     },
     {
       "from": 28,
@@ -712,33 +664,33 @@
     },
     {
       "from": 8,
-      "to": 13,
+      "to": 7,
       "replay": false,
+      "chosen": true
+    },
+    {
+      "from": 7,
+      "to": 6,
+      "replay": true,
       "chosen": false
     },
     {
-      "from": 13,
-      "to": 4,
-      "replay": false,
-      "chosen": true
-    },
-    {
-      "from": 4,
+      "from": 6,
       "to": 5,
       "replay": false,
-      "chosen": true
+      "chosen": false
     },
     {
       "from": 5,
       "to": 4,
-      "replay": true,
-      "chosen": false
+      "replay": false,
+      "chosen": true
     },
     {
       "from": 4,
       "to": 3,
       "replay": false,
-      "chosen": false
+      "chosen": true
     },
     {
       "from": 3,
@@ -784,15 +736,27 @@
     },
     {
       "from": 18,
-      "to": 35,
-      "replay": true,
+      "to": 34,
+      "replay": false,
       "chosen": true
+    },
+    {
+      "from": 34,
+      "to": 33,
+      "replay": true,
+      "chosen": false
+    },
+    {
+      "from": 33,
+      "to": 35,
+      "replay": false,
+      "chosen": false
     },
     {
       "from": 35,
       "to": 36,
       "replay": false,
-      "chosen": false
+      "chosen": true
     },
     {
       "from": 36,
@@ -811,6 +775,30 @@
       "to": 13,
       "replay": false,
       "chosen": true
+    },
+    {
+      "from": 13,
+      "to": 8,
+      "replay": false,
+      "chosen": true
+    },
+    {
+      "from": 8,
+      "to": 5,
+      "replay": false,
+      "chosen": false
+    },
+    {
+      "from": 5,
+      "to": 4,
+      "replay": true,
+      "chosen": false
+    },
+    {
+      "from": 4,
+      "to": 13,
+      "replay": false,
+      "chosen": false
     },
     {
       "from": 13,
@@ -886,9 +874,21 @@
     },
     {
       "from": 18,
-      "to": 19,
+      "to": 35,
+      "replay": false,
+      "chosen": true
+    },
+    {
+      "from": 35,
+      "to": 18,
       "replay": true,
       "chosen": false
+    },
+    {
+      "from": 18,
+      "to": 19,
+      "replay": true,
+      "chosen": true
     },
     {
       "from": 19,
