@@ -103,6 +103,7 @@ let step = 0;
 let currentNode = null;
 let currentAngleFrom = 0;
 let currentAngleTo = 0;
+let lastAngle=null;
 
 window.addEventListener("resize", redraw);
 
@@ -153,7 +154,7 @@ function redraw() {
     const nextNode = points[currEdge.to];
 
     const prevNode = step === 0
-        ? {x:546, y:147}
+        ? {x:546, y:147} //hardcoded assuming parcmonceau plan v1_path vX
         : points[pathEdges[step - 1].from];
 
     const angleFrom = Math.atan2(
@@ -178,6 +179,14 @@ function redraw() {
 /* =========================
    CAMERA CSS
 ========================= */
+
+const modulo = (x, n) => x - Math.floor(x / n) * n;
+
+function goodAngle(a) {
+  return modulo(a + Math.PI, 2 * Math.PI) - Math.PI;
+}
+function deg(x){return x* 180 / Math.PI;}
+
 function applyCamera(node, angleFrom) {
 
     const zoom = 4;
@@ -187,12 +196,14 @@ function applyCamera(node, angleFrom) {
 	const viewW = window.innerWidth;
 	const viewH = window.innerHeight;
 
-    const angleDeg = (-angleFrom - Math.PI/2) * 180 / Math.PI;
+    let angleDeg = goodAngle(-angleFrom - Math.PI/2);
+	if (lastAngle!=null && Math.abs(lastAngle-angleDeg)>Math.PI/2) angleDeg=lastAngle+goodAngle(angleDeg-goodAngle(lastAngle)); // is it worth testing ?
+	lastAngle=angleDeg;
 
     mapDiv.style.transform = `
         translate(${viewW/2}px, ${viewH/2}px)
         rotateX(60deg)
-        rotate(${angleDeg}deg)
+        rotate(${deg(angleDeg)}deg)
         scale(${zoom})
         translate(${-node.x}px, ${-node.y}px)
     `;
