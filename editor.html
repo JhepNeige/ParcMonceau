@@ -128,7 +128,7 @@ function loadDefault() {
 
       if (Array.isArray(d.path)) {
         pathEdges = d.path;
-        animatedCount = pathEdges.length;
+      //  animatedCount = pathEdges.length;
         playBtn.style.display = "inline-block";
         stopBtn.style.display = "inline-block";
       }
@@ -276,7 +276,7 @@ function computeDistances(odd){
  return d;
 }
 
-function bestMatching(odd,dist){
+function bestMatching(odd,dist){ // todo :stackoverflow timebomb ? brutal spreading again and again
  if(odd.length===0) return {cost:0,pairs:[]};
 
  let v=odd[0];
@@ -314,7 +314,9 @@ pathBtn.onclick=()=>{
 
  let odd=Object.keys(deg).filter(k=>deg[k]%2).map(Number);
 
- /* ✅ étape locale */
+ /* odd vertices must be matched with each-other to eurelize the graphe
+first we look for odd-odd edges, starting by the shortest and that's a match,
+so we dupe the edge, so both vertices become even. in the end some odd vertices can remain */
  while(true){
   let best=null, bestD=Infinity;
 
