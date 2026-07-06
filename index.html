@@ -120,13 +120,11 @@ function loadDefault() {
   img.src = "parc monceau.png"; // 📌 ton fichier local
 
   // --- Charger JSON ---
-  fetch("plan v1.json")
+  fetch("https://jhepneige.github.io/ParcMonceau/plan v1_path v2.json")
     .then(r => r.json())
     .then(d => {
       points = d.points || [];
       traits = d.traits || [];
-
-      resetPlayback();
 
       if (Array.isArray(d.path)) {
         pathEdges = d.path;
@@ -137,8 +135,8 @@ function loadDefault() {
 
       redraw();
     })
-    .catch(() => {
-      console.log("Pas de JSON chargé (ok)");
+    .catch((e) => {
+      console.log("Pas de JSON chargé",e);
     });
 }
 
