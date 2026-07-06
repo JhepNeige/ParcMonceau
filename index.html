@@ -120,7 +120,7 @@ function loadDefault() {
   img.src = "parc monceau.png"; // 📌 ton fichier local
 
   // --- Charger JSON ---
-  fetch("https://jhepneige.github.io/ParcMonceau/plan v1_path v2.json")
+  fetch("https://jhepneige.github.io/ParcMonceau/plan_path v2-temp.json")
     .then(r => r.json())
     .then(d => {
       points = d.points || [];

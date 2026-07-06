@@ -97,7 +97,7 @@ function loadJSON(file){
 
   if(Array.isArray(d.path)){
    pathEdges=d.path;
-   animatedCount=pathEdges.length;
+   //animatedCount=pathEdges.length; 
    playBtn.style.display=stopBtn.style.display="inline-block";
   }
 
@@ -118,7 +118,7 @@ function loadDefault() {
   img.src = "parc monceau.png"; // 📌 ton fichier local
 
   // --- Charger JSON ---
-  fetch("https://jhepneige.github.io/ParcMonceau/plan v1.json")
+  fetch("https://jhepneige.github.io/ParcMonceau/plan_path v2-temp.json")
     .then(r => r.json())
     .then(d => {
       points = d.points || [];
@@ -507,7 +507,7 @@ playBtn.onclick=()=>{
    animatedCount++;
    redraw();
   }else clearInterval(timer);
- },800);
+ },100);
 };
 
 stopBtn.onclick=()=>clearInterval(timer);
